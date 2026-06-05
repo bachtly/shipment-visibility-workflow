@@ -12,8 +12,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 # Ensure env vars have defaults for local runs without .env
-os.environ.setdefault("DBOS_SYSTEM_DATABASE_URL", "postgresql://shipvis:shipvis@localhost:5433/shipvis")
-os.environ.setdefault("DATABASE_URL", "postgresql://shipvis:shipvis@localhost:5433/shipvis")
+os.environ.setdefault("DBOS_SYSTEM_DATABASE_URL", "postgresql+psycopg://shipvis:shipvis@localhost:5433/shipvis")
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://shipvis:shipvis@localhost:5433/shipvis")
 
 
 @pytest.fixture(scope="session")

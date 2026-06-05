@@ -27,8 +27,8 @@ jobs:
           --health-retries 10
 
     env:
-      DBOS_SYSTEM_DATABASE_URL: postgresql://shipvis:shipvis@localhost:5432/shipvis
-      DATABASE_URL: postgresql://shipvis:shipvis@localhost:5432/shipvis
+      DBOS_SYSTEM_DATABASE_URL: postgresql+psycopg://shipvis:shipvis@localhost:5432/shipvis
+      DATABASE_URL: postgresql+psycopg://shipvis:shipvis@localhost:5432/shipvis
       DBOS_CONDUCTOR_KEY: ""
 
     steps:
