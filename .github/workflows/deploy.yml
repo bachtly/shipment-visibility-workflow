@@ -1,0 +1,119 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: dev
+        type: choice
+        options: [dev, staging]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Set image tag
+        id: meta
+        run: |
+          ACR=${{ secrets.ACR_LOGIN_SERVER }}
+          TAG="${ACR}/shipment-visibility:${{ github.sha }}"
+          echo "image=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        run: |
+          az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+          docker build -t ${{ steps.meta.outputs.image }} .
+          docker push ${{ steps.meta.outputs.image }}
+
+  deploy-dev:
+    name: Deploy → dev
+    needs: build-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.environment == 'dev'
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10"
+
+      - name: Install Terragrunt
+        run: |
+          curl -sL https://github.com/gruntwork-io/terragrunt/releases/download/v0.68.0/terragrunt_linux_amd64 \
+            -o /usr/local/bin/terragrunt && chmod +x /usr/local/bin/terragrunt
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Apply dev
+        working-directory: infra/live/dev
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          DBOS_CONDUCTOR_KEY: ${{ secrets.DBOS_CONDUCTOR_KEY }}
+          TF_VAR_container_image: ${{ needs.build-push.outputs.image }}
+        run: terragrunt apply -auto-approve
+
+  deploy-staging:
+    name: Deploy → staging
+    needs: build-push
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging'
+    environment: staging  # requires manual approval in GitHub env settings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10"
+
+      - name: Install Terragrunt
+        run: |
+          curl -sL https://github.com/gruntwork-io/terragrunt/releases/download/v0.68.0/terragrunt_linux_amd64 \
+            -o /usr/local/bin/terragrunt && chmod +x /usr/local/bin/terragrunt
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Apply staging
+        working-directory: infra/live/staging
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          DBOS_CONDUCTOR_KEY: ${{ secrets.DBOS_CONDUCTOR_KEY }}
+          TF_VAR_container_image: ${{ needs.build-push.outputs.image }}
+        run: terragrunt apply -auto-approve

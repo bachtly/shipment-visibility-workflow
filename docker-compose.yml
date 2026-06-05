@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: shipvis
+      POSTGRES_PASSWORD: shipvis
+      POSTGRES_DB: shipvis
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipvis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    ports:
+      - "8080:8080"
+    environment:
+      DBOS_SYSTEM_DATABASE_URL: postgresql://shipvis:shipvis@postgres:5432/shipvis
+      DATABASE_URL: postgresql://shipvis:shipvis@postgres:5432/shipvis
+      DBOS_CONDUCTOR_KEY: ${DBOS_CONDUCTOR_KEY:-}
+    volumes:
+      - ./backend/app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
