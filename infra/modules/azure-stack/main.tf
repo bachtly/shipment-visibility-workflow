@@ -160,6 +160,14 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
 
+# DBOS schema migrations run CREATE EXTENSION "uuid-ossp". Azure Flexible Server
+# blocks extensions unless they are allow-listed via azure.extensions.
+resource "azurerm_postgresql_flexible_server_configuration" "extensions" {
+  name      = "azure.extensions"
+  server_id = azurerm_postgresql_flexible_server.postgres.id
+  value     = "UUID-OSSP"
+}
+
 resource "azurerm_postgresql_flexible_server_database" "app" {
   name      = local.db_name
   server_id = azurerm_postgresql_flexible_server.postgres.id
