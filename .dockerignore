@@ -1,0 +1,40 @@
+# The image only needs `backend/app` and `frontend/` (see Dockerfile).
+# Everything below is excluded from the build context to keep uploads small
+# and to keep secrets/state out of the ACR build.
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# VCS & tooling
+.git
+.gitignore
+.github
+
+# Node (the frontend stage runs `npm ci` itself)
+**/node_modules
+frontend/dist
+
+# Python caches / virtualenvs
+**/__pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Infrastructure (not part of the app image)
+infra
+**/.terragrunt-cache
+*.tfstate
+*.tfstate.*
+.terraform
+.terraform.lock.hcl
+
+# Docs & local dev
+docs
+README.md
+docker-compose.yml
+deploy.sh
