@@ -20,7 +20,12 @@ _engine = None
 def get_engine():
     global _engine
     if _engine is None:
-        _engine = create_engine(os.environ["DATABASE_URL"])
+        # Force the psycopg v3 driver: the image ships psycopg[binary] (v3), not
+        # psycopg2, so a bare "postgresql://" URL (which SQLAlchemy maps to the
+        # psycopg2 dialect by default) fails with ModuleNotFoundError. The replace
+        # is idempotent — "postgresql+psycopg://" has no "postgresql://" substring.
+        url = os.environ["DATABASE_URL"].replace("postgresql://", "postgresql+psycopg://", 1)
+        _engine = create_engine(url)
     return _engine
 
 
