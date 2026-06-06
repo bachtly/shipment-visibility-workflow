@@ -141,8 +141,28 @@ shipment-visibility-system/
 
 Deploy with Terragrunt (requires Azure CLI authenticated + OIDC in GitHub Actions):
 
+**First time only**
 ```bash
-# First time: create the remote-state storage account manually, then:
+# First time only — create the remote-state backend (names must match the
+# remote_state block in infra/root.hcl: rg-terraform-state / stshipvistfstate / tfstate):
+az group create --name rg-terraform-state --location australiaeast
+
+az storage account create \
+  --name stshipvistfstate \
+  --resource-group rg-terraform-state \
+  --location australiaeast \
+  --sku Standard_LRS \
+  --kind StorageV2 \
+  --min-tls-version TLS1_2
+
+az storage container create \
+  --name tfstate \
+  --account-name stshipvistfstate
+```
+
+
+```bash 
+# Then deploy:
 cd infra/live/dev
 terragrunt init && terragrunt plan && terragrunt apply
 ```

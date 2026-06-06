@@ -1,5 +1,5 @@
 locals {
-  prefix = "shipvis-${var.env}"
+  prefix  = "shipvis-${var.env}"
   db_name = "shipvis"
   db_user = "shipvisadmin"
 }
@@ -99,24 +99,24 @@ resource "azurerm_role_assignment" "acr_pull" {
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "kv" {
-  name                        = "kv-${local.prefix}"
-  resource_group_name         = azurerm_resource_group.rg.name
-  location                    = azurerm_resource_group.rg.location
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  sku_name                    = "standard"
-  purge_protection_enabled    = false
-  soft_delete_retention_days  = 7
-  tags                        = var.tags
+  name                       = "kv-${local.prefix}"
+  resource_group_name        = azurerm_resource_group.rg.name
+  location                   = azurerm_resource_group.rg.location
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  purge_protection_enabled   = false
+  soft_delete_retention_days = 7
+  tags                       = var.tags
 
   access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
+    tenant_id          = data.azurerm_client_config.current.tenant_id
+    object_id          = data.azurerm_client_config.current.object_id
     secret_permissions = ["Get", "Set", "Delete", "List", "Purge", "Recover"]
   }
 
   access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = azurerm_user_assigned_identity.app.principal_id
+    tenant_id          = data.azurerm_client_config.current.tenant_id
+    object_id          = azurerm_user_assigned_identity.app.principal_id
     secret_permissions = ["Get"]
   }
 }
@@ -152,8 +152,10 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   storage_mb             = var.postgres_storage_mb
   delegated_subnet_id    = azurerm_subnet.postgres.id
   private_dns_zone_id    = azurerm_private_dns_zone.postgres.id
-  zone                   = "1"
-  tags                   = var.tags
+  # VNet-injected Flexible Server requires public access disabled (Azure rejects both together)
+  public_network_access_enabled = false
+  zone                          = "1"
+  tags                          = var.tags
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }
