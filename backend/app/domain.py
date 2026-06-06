@@ -76,6 +76,7 @@ ALLOWED_EVENTS: dict[ShipmentStatus, list[EventType]] = {
     ShipmentStatus.CONSOLIDATED: [EventType.AT_PORT],
     ShipmentStatus.DRAYAGE: [EventType.EXPORT_DECLARATION_FILED],
     ShipmentStatus.EXPORT_CUSTOMS: [
+        EventType.EXPORT_DECLARATION_FILED,  # opens the gate (child's first recv)
         EventType.CUSTOMS_RELEASED,
         EventType.CUSTOMS_HELD,
         EventType.QUERY_RESPONDED,

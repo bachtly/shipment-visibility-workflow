@@ -130,17 +130,16 @@ def shipment_workflow(shipment_id: str) -> None:
 
     # ---- Main haul ----
 
-    _wait_and_advance(
-        shipment_id, EventType.HANDOVER, ShipmentStatus.HANDOVER, "B/L or AWB issued, handed to carrier"
-    )
-
-    # IN_TRANSIT loop — accumulate transit pings until 'arrived'
+    # Export gate cleared → auto-advance to carrier handover and rest here.
+    # (Mirrors how the gate auto-opens; there is no separate "handover" vendor event.)
     db.record_status_change(
-        shipment_id, EventType.TRANSIT_PING.value, ShipmentStatus.IN_TRANSIT.value, "En-route tracking started"
+        shipment_id, EventType.HANDOVER.value, ShipmentStatus.HANDOVER.value,
+        "Export cleared — B/L or AWB issued, handed to carrier",
     )
-    DBOS.set_event("status", _status_snapshot(shipment_id, ShipmentStatus.IN_TRANSIT.value))
-    steps.notify_status_change(shipment_id, ShipmentStatus.IN_TRANSIT.value)
+    DBOS.set_event("status", _status_snapshot(shipment_id, ShipmentStatus.HANDOVER.value))
+    steps.notify_status_change(shipment_id, ShipmentStatus.HANDOVER.value)
 
+    # IN_TRANSIT loop — first ping starts the haul; accumulate until 'arrived'
     while True:
         ping_evt = DBOS.recv("milestone", timeout_seconds=RECV_TIMEOUT)
         if ping_evt == EventType.ARRIVED.value:
@@ -168,9 +167,14 @@ def shipment_workflow(shipment_id: str) -> None:
     db.save_workflow_ids(shipment_id, this_id, customs_handle.workflow_id)
     customs_handle.get_result()
 
-    _wait_and_advance(
-        shipment_id, EventType.INLAND_DISPATCHED, ShipmentStatus.INLAND_HAUL, "Dispatched inland to receiver"
+    # Import gate cleared → auto-advance to inland haul and rest here.
+    db.record_status_change(
+        shipment_id, EventType.INLAND_DISPATCHED.value, ShipmentStatus.INLAND_HAUL.value,
+        "Import cleared — dispatched inland to receiver",
     )
+    DBOS.set_event("status", _status_snapshot(shipment_id, ShipmentStatus.INLAND_HAUL.value))
+    steps.notify_status_change(shipment_id, ShipmentStatus.INLAND_HAUL.value)
+
     _wait_and_advance(
         shipment_id, EventType.DELIVERED, ShipmentStatus.DELIVERED, "Delivered — PoD captured"
     )

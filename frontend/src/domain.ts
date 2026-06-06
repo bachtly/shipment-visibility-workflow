@@ -36,7 +36,12 @@ export const ALLOWED_EVENTS: Record<ShipmentStatus, EventType[]> = {
   picked_up: ["consolidated"],
   consolidated: ["at_port"],
   drayage: ["export_declaration_filed"],
-  export_customs: ["customs_released", "customs_held", "query_responded"],
+  export_customs: [
+    "export_declaration_filed",
+    "customs_released",
+    "customs_held",
+    "query_responded",
+  ],
   handover: ["transit_ping", "arrived"],
   in_transit: ["transit_ping", "arrived"],
   import_customs: [

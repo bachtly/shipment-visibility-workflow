@@ -100,7 +100,11 @@ def fire_event(shipment_id: str, body: FireEventRequest) -> dict:
             raise HTTPException(status_code=409, detail="No active customs workflow for this shipment")
         DBOS.send(ship.customs_workflow_id, body.event_type, "customs")
     else:
-        # Route to the main shipment workflow
+        # Route to the main shipment workflow. While a customs gate is open the
+        # main workflow is parked on the child's get_result(), so a milestone
+        # event (e.g. handover) would buffer and silently skip the gate.
+        if ship.customs_workflow_id:
+            raise HTTPException(status_code=409, detail="Customs gate still open — resolve customs before advancing")
         if not ship.workflow_id:
             raise HTTPException(status_code=409, detail="Shipment has no active workflow")
         DBOS.send(ship.workflow_id, body.event_type, "milestone")
