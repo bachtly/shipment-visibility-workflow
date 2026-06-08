@@ -44,7 +44,14 @@ generate "provider" {
     }
 
     provider "azurerm" {
-      features {}
+      features {
+        resource_group {
+          # Azure auto-creates a "Smart Detection" action group inside RGs that
+          # contain Application Insights. It isn't in our state, so deleting the
+          # RG fails unless we let the provider delete via the Azure API directly.
+          prevent_deletion_if_contains_resources = false
+        }
+      }
       use_oidc = true
     }
   EOF
